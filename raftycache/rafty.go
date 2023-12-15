@@ -34,8 +34,22 @@ func (rc *RaftyCache) Set(k, v []byte, ttl time.Duration) error {
 		return fmt.Errorf("➜ key already exists")
 	}
 	rc.Data[key] = v
+
+	// cache eviction
+	go rc.EvictMsg(k, ttl)
 	return nil
 }
+
+// handle cache eviction
+func (rc *RaftyCache) EvictMsg(key []byte, ttl time.Duration) {
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
+
+	ticker := time.NewTicker(ttl)
+	<-ticker.C
+	delete(rc.Data, string(key))
+}
+
 func (rc *RaftyCache) Get(k []byte) ([]byte, error) {
 	// lcok
 	rc.lock.RLock()
